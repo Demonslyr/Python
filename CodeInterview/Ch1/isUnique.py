@@ -6,12 +6,16 @@ testString_2 = "Yes"
 testString_3 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-=!@#$%^&*()_+~`,./;'[]\{}|:<>??"
 
 def areCharsUnique(inputString):
+    if len(inputString) > 128:
+        return False
     for character in inputString:
         if len(inputString.split(character, 3)) > 2:
             return False
     return True
 
 def stillAreCharsUnique(inputString):
+    if len(inputString) > 128:
+        return False
     return len(inputString) == len(set(inputString))
 
 def main():
