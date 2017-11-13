@@ -9,7 +9,7 @@ def areCharsUnique(inputString):
     if len(inputString) > 128:
         return False
     for character in inputString:
-        if len(inputString.split(character, 3)) > 2:
+        if len(inputString.split(character, 2)) > 2:
             return False
     return True
 
