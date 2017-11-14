@@ -12,8 +12,15 @@ def isStringPermutation(stringInQuestion, stringToCompareAgainst):
         return True
     return (normalShiftCompare(stringInQuestion, stringToCompareAgainst) or mirroredStringShiftCompare(stringInQuestion, stringToCompareAgainst))
 
+def isPermutation(stringInQuestion, stringToCompareAgainst):
+    if stringInQuestion == stringToCompareAgainst:
+        return True
+    return sorted(stringInQuestion) == sorted(stringToCompareAgainst)
+
 def main():
-    print(isStringPermutation("Hello", "leHol"))
+    print(isPermutation("Hello", "leHol"))
+    print(isPermutation("Hello", "eHllo"))
+    print(isPermutation("Hello", "leHl"))
     
 
 if __name__ == "__main__":
