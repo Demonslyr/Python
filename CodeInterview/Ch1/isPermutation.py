@@ -7,11 +7,6 @@ def normalShiftCompare(stringInQuestion, stringToCompareAgainst):
 def mirroredStringShiftCompare(stringInQuestion, stringToCompareAgainst):
     return normalShiftCompare(stringInQuestion[::-1], stringToCompareAgainst)
 
-def isStringPermutation(stringInQuestion, stringToCompareAgainst):
-    if stringInQuestion == stringToCompareAgainst:
-        return True
-    return (normalShiftCompare(stringInQuestion, stringToCompareAgainst) or mirroredStringShiftCompare(stringInQuestion, stringToCompareAgainst))
-
 def isPermutation(stringInQuestion, stringToCompareAgainst):
     if stringInQuestion == stringToCompareAgainst:
         return True
