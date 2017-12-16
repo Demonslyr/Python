@@ -17,6 +17,8 @@ def importData(filePath):
         if "[" in line and "]" in line:
             headers = ["caseNumbers"]+line.translate(None, '[]').strip().split(' ')
             continue
+        # if len(line.strip()) < 1:
+        #     continue
         data.append([str(caseNumber)]+line.rstrip('\n').split(' '))
         caseNumber = caseNumber+1
     return [headers, data]
@@ -66,10 +68,14 @@ def getTheStarSet(partition, labels, data):
     columns = []
     scopedSet= []
     distinctSet = []
+    #get label indecies of attributes in the partition
     for att in partition:
         columns.append(labels.index(att))
+    #Reduce every case to it's entity + attribute columns + decision
+    #BUGFIX: remove decision from the scoped set
     for case in data:
-        scopedSet.append(([case[0]]+[case[x] for x in columns]+[case[len(case)-1]]))
+        scopedSet.append(([case[0]]+[case[x] for x in columns]))
+        # old version: scopedSet.append(([case[0]]+[case[x] for x in columns]+[case[len(case)-1]]))
     [distinctSet.append(i[1:len(i)]) for i in scopedSet if not distinctSet.count(i[1:len(i)])]
     starSet = [[] for x in range(len(distinctSet))]
     for case in scopedSet:
@@ -139,52 +145,61 @@ def NotDStarIsLessThanOrEqualToDStar(NotDStar, DStar):
 
 
 # The input (Set of all attributes A, partiton {d}* on U [This is just a set of subsets of entities from U (the set of everything) grouped by descision])
-def lem1(U, symbolic = False):
+def lem1Staging(U, symbolic = False):
     if not symbolic:
         Symbolicise(U[1])
     RList = []
     DStar = getDStar(U[1])
     A = U[0][1:len(U[0])-1]
-    AStarPartitionSet = generatePartitionsForSet(U)#computePartitions()#will probably become a generate all discernable partitions and for each over them
-    for ASetPair in AStarPartitionSet:
-        P = A[:]
-        R = None
-        if NotDStarIsLessThanOrEqualToDStar(ASetPair[1], DStar):#not the worst comparison function
-            #print(ASetPair[1], "Is less than ",DStar,sep='\n')
-            #print(A)
-            for a in A:
-                #print("P",P)
-                #print("a",a)
-                Q = P[:]#.remove(a) # remove the value a from P     P-a
-                # print("P - a",P)
-                Q.remove(a)
-                #print("P",P)
-                if len(Q) < 1:
-                    break
-                #print("Q",Q)
-                # print("U[0]",U[0])
-                # print("U[1]",U[1])
-                QStar = getTheStarSet(Q,U[0], U[1])#will probably become a generate all discernable partitions and for each over them
-                if NotDStarIsLessThanOrEqualToDStar(QStar[1], DStar):#not the worst comparison function
-                    P = Q[:]
-            R = P[:]
-            #print(R)
-        RList.append(R[:])
+    result = lem1(U,A,DStar)
+    RList.append(result)
+    # AStarPartitionSet = generatePartitionsForSet(U)#computePartitions()#will probably become a generate all discernable partitions and for each over them
+    # for ASetPair in AStarPartitionSet:
     return RList
 
+def lem1(U,A,DStar):
+    AStar = getTheStarSet(A,U[0], U[1])
+    P = A[:] #alternate
+    # P = list(ASetPair[0][:])
+    R = None
+    # print("Is ",ASetPair[1], " less than ",DStar,sep='\n')
+    if NotDStarIsLessThanOrEqualToDStar(AStar[1], DStar):#not the worst comparison function
+        # print("Yes it is")
+        # print("ASetPair",ASetPair[0])
+        for a in A: #alternate
+        # for a in ASetPair[0]:
+            # print("P",P)
+            # print("a",a)
+            Q = P[:]#.remove(a) # remove the value a from P     P-a
+            # print("P - a",P)
+            Q.remove(a)
+            # print("P",P)
+            if len(Q) < 1:
+                break
+            # print("Q",Q)
+            # print("U[0]",U[0])
+            # print("U[1]",U[1])
+            QStar = getTheStarSet(Q,U[0], U[1])#will probably become a generate all discernable partitions and for each over them
+            # print("Is ",QStar[1], " less than ",DStar,sep='\n')
+            if NotDStarIsLessThanOrEqualToDStar(QStar[1], DStar):#not the worst comparison function
+                # print("Yes it is")
+                P = Q[:]
+        R = P[:]
+        # print(R)
+    return R
 def main():
-    data = importData(r"C:\Users\DrMur\DataMining\Programming Project\wine.txt");
+    data = importData(r"C:\Users\DrMur\DataMining\Programming Project\flu.txt");
     # Symbolicise(data[1])
-    results = lem1(data, symbolic=True)
-    print(results,sep='\n')
+    # results = lem1Staging(data, symbolic=True)
+    # print(results,sep='\n')
     #combos = generateAttributeCombos(data[0][1:len(data[0])-1])
 
     #print(data)
     # print("DStar: ",getDStar(data[1]))
     #print(combos)
-    # sets = generatePartitionsForSet(data)
-    # for StarSet in sets:
-    #     print(StarSet)
+    sets = generatePartitionsForSet(data)
+    for StarSet in sets:
+        print(StarSet)
 
     # DStar = [['1','2','4','5'],['3','6','7']]
     # FailStar = [['3','6'],['5','7']]
