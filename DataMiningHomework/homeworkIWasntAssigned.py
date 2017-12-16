@@ -66,53 +66,44 @@ def getTheStarSet(partition, labels, data):
     columns = []
     scopedSet= []
     distinctSet = []
-    #print("Partition",partition)
     for att in partition:
         columns.append(labels.index(att))
-        #print(columns)
     for case in data:
         scopedSet.append(([case[0]]+[case[x] for x in columns]+[case[len(case)-1]]))
-        #scopedSet.append([case[x] for x in columns]+[case[len(case)-1]])
     [distinctSet.append(i[1:len(i)]) for i in scopedSet if not distinctSet.count(i[1:len(i)])]
-    #[distinctSet.append(i) for i in scopedSet if not distinctSet.count(i)]
-    #print("Scoped Set: ",scopedSet)
-    #print("Distinct Set: ",distinctSet)
     starSet = [[] for x in range(len(distinctSet))]
     for case in scopedSet:
-        #print("Case: ",case)
         starSet[distinctSet.index(case[1:len(i)])].append(case[0])
-    return starSet 
-
-    
-    
-
-    
+    return [partition,starSet ]
 
 def generatePartitionsForSet(dataIn):
     data = dataIn[1]
     labels = dataIn[0]
     attributeGroups = generateAttributeCombos(labels[1:len(labels)-1])
-    #print(attributeGroups)
     starSets = []
     for partition in attributeGroups:
         starSet = getTheStarSet(partition,labels, data)
         starSets.append(starSet)
     return starSets
 
-def computePartitionAStar():
-    pass
-
-def computePartitionQStar():
-    pass
-
-def getSeta():
-    pass
-
-def AStarIsLessThanOrEqualToSetDStar(AStar, SetDStar):
-    pass
-
-def QStarIsLessThanOrEqualToSetDStar(QStar, SetDStar):
-    pass
+def NotDStarIsLessThanOrEqualToDStar(NotDStar, DStar):
+    # set inequalities
+    # so {{1},{2},{3},{4},{5},{6},{7}} <= {{1,2,4,5},{3,6,7}} is true
+    # but {{1},{2},{3,6},{4},{5,7}} <= {{1,2,4,5},{3,6,7}} is not
+    # This is because there is no way to group the subsets of 
+    # {{1},{2},{3,6},{4},{5,7}} to create the subsets of  {{1,2,4,5},{3,6,7}}
+    setOfConcerns = [x for x in NotDStar if len(x) > 1]
+    if len(setOfConcerns) is 0:
+        return True #NotDStar Is Less Than Or Equal To DStar
+    for subset in setOfConcerns:
+        fail = True
+        for grouping in DStar:
+            if set(subset).issubset(set(grouping)):
+                fail = False
+                break
+        if fail:
+            return False
+    return True
 
 # U is the data table. 
 # Each row is called a case (also an entity). 
@@ -120,42 +111,88 @@ def QStarIsLessThanOrEqualToSetDStar(QStar, SetDStar):
 # The subset of all rows(cases) that have the same decision are called a concept.
 # Equivalence classes are also called blocks
 # {d}* is a set of subsets grouped by descision ie. {{yes, yes, yes}{no, no},{maybe}} but by their case row numbers instead like this {{row1, row3, row4}{row2, row6},{row5}}
-# 
-# set inequalities
-# so {{1},{2},{3},{4},{5},{6},{7}} <= {{1,2,4,5},{3,6,7}} is true
-# but {{1},{2},{3,6},{4},{5,7}} <= {{1,2,4,5},{3,6,7}} is not
-# This is because there is no way to group the subsets of 
-# {{1},{2},{3,6},{4},{5,7}} to create the subsets of  {{1,2,4,5},{3,6,7}}
 #
 # A note on Discernible... This is not distinct. In the case of 3 attributes and one descision(ex:{a,b,c,d}) {1,1,2,4} this is indiscernible from {1,1,3,4} for the {a,b} partition
 # Note: The above example needs a lot of pretext.
 
+# A is all attributes (['A','B','C',..])
+# B is a nonempty subset of A (['B','C'])
+# U is all cases (pretty much the dataset + potentially all future inputs)
+# IND(B) is an indiscernibility relationship where, for (the arbitrary cases ) x and y of set U, 
+# (x,y) are of IND(B) if an only if the values for all attributes from B (the nonempty subset of sattributes) are identical
+# This just means that in the context of only the attributes provided by B. You can't tell x and y apart if all attributes in context are the same. They, in that context, are effectively identical.
+# StarSets(my word I added) are IND(Set) are the family of all elementary sets which is just the set of discernable subsets of attributes...
+
+# in the algo
+# "compute partition A*" is one of the starSets [('C',), [['1'], ['2'], ['3', '4', '5'], ['6'], ['7']]] or [('A', 'B'), [['1'], ['2'], ['3'], ['4'], ['5'], ['6'], ['7']]] or etc
+# so the idea is you pass in a partition then calculate the partitionStar and that is your A* for this loop.
+# P=A means set P to the set of all sttributes. The := symbol means refernece/redefine as but we'll jsut make a copy of A
+# R is set to null but will eventually be the remaining meaningful attributes for that partition. How to output that properly is not a consern at this stage. Just return it for now.
+# if the A* set is <= d* as detailed above then enter the loop
+## inside the for each
+## for each attribute in A (list of all attributes)
+## Set placeholder Q to equal P - A (one by one subtracting attributes from the set)
+## get Q* and check if it's also less than d*
+## if it is, then P = the reduced attribute set Q
+##loop
+# after this set R to whatever P is and return that.
+
+
 # The input (Set of all attributes A, partiton {d}* on U [This is just a set of subsets of entities from U (the set of everything) grouped by descision])
-def lem1(U, A, SetDStar):
-    AStarPartitionSet = computePartitions()#will probably become a generate all discernable partitions and for each over them
-    P = A
-    R = 0
-    if AStarIsLessThanOrEqualToSetDStar(AStar, SetDStar):#not the worst comparison function
-        for a in AStar:
-            Seta = getSeta()#a discernible subset of AStar?
-            Q = P - Seta
-            QStar = computePartitionQStar()#will probably become a generate all discernable partitions and for each over them
-            if QStarIsLessThanOrEqualToSetDStar(QStar, SetDStar):#not the worst comparison function
-                P = Q
-        R = P
-    return R
+def lem1(U, symbolic = False):
+    if not symbolic:
+        Symbolicise(U[1])
+    RList = []
+    DStar = getDStar(U[1])
+    A = U[0][1:len(U[0])-1]
+    AStarPartitionSet = generatePartitionsForSet(U)#computePartitions()#will probably become a generate all discernable partitions and for each over them
+    for ASetPair in AStarPartitionSet:
+        P = A[:]
+        R = None
+        if NotDStarIsLessThanOrEqualToDStar(ASetPair[1], DStar):#not the worst comparison function
+            #print(ASetPair[1], "Is less than ",DStar,sep='\n')
+            #print(A)
+            for a in A:
+                #print("P",P)
+                #print("a",a)
+                Q = P[:]#.remove(a) # remove the value a from P     P-a
+                # print("P - a",P)
+                Q.remove(a)
+                #print("P",P)
+                if len(Q) < 1:
+                    break
+                #print("Q",Q)
+                # print("U[0]",U[0])
+                # print("U[1]",U[1])
+                QStar = getTheStarSet(Q,U[0], U[1])#will probably become a generate all discernable partitions and for each over them
+                if NotDStarIsLessThanOrEqualToDStar(QStar[1], DStar):#not the worst comparison function
+                    P = Q[:]
+            R = P[:]
+            #print(R)
+        RList.append(R[:])
+    return RList
 
 def main():
-    data = importData(r"C:\Users\DrMur\DataMining\Programming Project\test.txt");
-    Symbolicise(data[1])
+    data = importData(r"C:\Users\DrMur\DataMining\Programming Project\wine.txt");
+    # Symbolicise(data[1])
+    results = lem1(data, symbolic=True)
+    print(results,sep='\n')
     #combos = generateAttributeCombos(data[0][1:len(data[0])-1])
 
     #print(data)
-    #print(getDStar(data[1]))
+    # print("DStar: ",getDStar(data[1]))
     #print(combos)
-    sets = generatePartitionsForSet(data)
-    for StarSet in sets:
-        print(StarSet)
+    # sets = generatePartitionsForSet(data)
+    # for StarSet in sets:
+    #     print(StarSet)
+
+    # DStar = [['1','2','4','5'],['3','6','7']]
+    # FailStar = [['3','6'],['5','7']]
+    # PassStar = [['1','4'],['3','6']]
+
+    # print("I should be true: ",NotDStarIsLessThanOrEqualToSetDStar(PassStar,DStar))
+    # print("I should be false: ",NotDStarIsLessThanOrEqualToSetDStar(FailStar,DStar))
+
 
 if __name__ == "__main__":
     main()
