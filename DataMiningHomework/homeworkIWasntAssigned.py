@@ -10,20 +10,22 @@ def importData(filePath):
     f = open(filePath, "r")
     headers = []
     data = []
+    caseNumber = 1
     for line in f:
         if "<" in line and ">" in line:
             continue
         if "[" in line and "]" in line:
-            headers = line.translate(None, '[]').strip().split(' ')
+            headers = ["caseNumbers"]+line.translate(None, '[]').strip().split(' ')
             continue
-        data.append(line.rstrip('\n').split(' '))
+        data.append([str(caseNumber)]+line.rstrip('\n').split(' '))
+        caseNumber = caseNumber+1
     return [headers, data]
 
 def Symbolicise(data):
     symbols ={}
     distinctSet = []
     attCols = len(data[0])-1
-    for column in range(0,attCols):
+    for column in range(1,attCols):
         for case in data:
             distinctSet.append(float(case[column]))
         distinctSet = sorted(set(distinctSet))
@@ -50,7 +52,7 @@ def getDStar(data):
     distinctSet = list(set(distinctSet))
     DStar = [[] for x in range(len(distinctSet))]
     for case in data:
-        DStar[distinctSet.index(case[len(case)-1])].append(case[len(case)-1])
+        DStar[distinctSet.index(case[len(case)-1])].append(case[0])
     return DStar 
 
 def generateAttributeCombos(attributes):
@@ -59,14 +61,43 @@ def generateAttributeCombos(attributes):
         combos = combos + list(combinations(attributes, x+1))
     return combos
 
-def generatePartitionsForSet(labels, data):
-    attributeGroups = generateAttributeCombos(labels[:len(labels)-1])
+def getTheStarSet(partition, labels, data):
+    #ex: ('A','B'), ['caseNumbers',A','B','C','D'], [[1,1,2,3,4],..,[n,1,1,3,3]]
+    columns = []
+    scopedSet= []
+    distinctSet = []
+    #print("Partition",partition)
+    for att in partition:
+        columns.append(labels.index(att))
+        #print(columns)
+    for case in data:
+        scopedSet.append(([case[0]]+[case[x] for x in columns]+[case[len(case)-1]]))
+        #scopedSet.append([case[x] for x in columns]+[case[len(case)-1]])
+    [distinctSet.append(i[1:len(i)]) for i in scopedSet if not distinctSet.count(i[1:len(i)])]
+    #[distinctSet.append(i) for i in scopedSet if not distinctSet.count(i)]
+    #print("Scoped Set: ",scopedSet)
+    #print("Distinct Set: ",distinctSet)
+    starSet = [[] for x in range(len(distinctSet))]
+    for case in scopedSet:
+        #print("Case: ",case)
+        starSet[distinctSet.index(case[1:len(i)])].append(case[0])
+    return starSet 
+
     
-    numAttributes = len(labels)-1
-    combos = math.pow(2,numAttributes)-1
-    setStarHolder = [[] for x in combos]
     
 
+    
+
+def generatePartitionsForSet(dataIn):
+    data = dataIn[1]
+    labels = dataIn[0]
+    attributeGroups = generateAttributeCombos(labels[1:len(labels)-1])
+    #print(attributeGroups)
+    starSets = []
+    for partition in attributeGroups:
+        starSet = getTheStarSet(partition,labels, data)
+        starSets.append(starSet)
+    return starSets
 
 def computePartitionAStar():
     pass
@@ -84,9 +115,9 @@ def QStarIsLessThanOrEqualToSetDStar(QStar, SetDStar):
     pass
 
 # U is the data table. 
-# Each row is called a case( also an entity). 
-# The last column of a row is typically the descision(outcome/result/choice). 
-# The subset of all rows that have the same decision are called a concept.
+# Each row is called a case (also an entity). 
+# The last column(attribute/parameter) of a row is typically the descision(outcome/result/choice). 
+# The subset of all rows(cases) that have the same decision are called a concept.
 # Equivalence classes are also called blocks
 # {d}* is a set of subsets grouped by descision ie. {{yes, yes, yes}{no, no},{maybe}} but by their case row numbers instead like this {{row1, row3, row4}{row2, row6},{row5}}
 # 
@@ -117,11 +148,15 @@ def lem1(U, A, SetDStar):
 def main():
     data = importData(r"C:\Users\DrMur\DataMining\Programming Project\test.txt");
     Symbolicise(data[1])
-    combos = generateAttributeCombos(data[0][:3])
+    #combos = generateAttributeCombos(data[0][1:len(data[0])-1])
 
-    print(data)
-    print(getDStar(data[1]))
-    print(combos)
+    #print(data)
+    #print(getDStar(data[1]))
+    #print(combos)
+    sets = generatePartitionsForSet(data)
+    for StarSet in sets:
+        print(StarSet)
+
 if __name__ == "__main__":
     main()
 
