@@ -3,10 +3,14 @@
 from __future__ import print_function
 from itertools import *
 from decimal import Decimal
+from copy import copy
 import math
-import copy
+import sys
 
-
+def exportResults(filePath, results):
+    with open(filePath, 'w') as f:
+        for line in results:
+            f.write(line+'\n')
 def importData(filePath):
     f = open(filePath, "r")
     headers = []
@@ -16,28 +20,28 @@ def importData(filePath):
         if "<" in line and ">" in line:
             continue
         if "[" in line and "]" in line:
-            headers = ["caseNumbers"]+line.translate(None, '[]').strip().split(' ')
+            headers = ["caseNumbers"]+line.translate(None, '[]').strip().split()
             continue
-        # if len(line.strip()) < 1:
-        #     continue
-        data.append([str(caseNumber)]+line.rstrip('\n').split(' '))
+        if line.isspace():
+            continue
+        data.append([str(caseNumber)]+line.rstrip('\n').split())
         caseNumber = caseNumber+1
     return [headers, data]
 
 def Symbolicise(data):
-    symbols ={}
-    distinctSet = []
-    attCols = len(data[0])-1
-    for column in range(1,attCols):
-        for case in data:
-            distinctSet.append(float(case[column]))
-        distinctSet = sorted(set(distinctSet))
+    symbols = {}
+    for column in range(1,len(data[0])-1):
+        try:
+            x = float(data[0][column])
+        except:
+                continue
+        distinctSet = sorted(set([float(data[x][column]) for x in range(len(data))]))
         symbols[str(distinctSet[0])] = str(distinctSet[0]) +".."+str((distinctSet[0]+distinctSet[1])/2)
         for itemIndx in range(1,len(distinctSet)-1):
             symbols[str(distinctSet[itemIndx])] = str((distinctSet[itemIndx]+distinctSet[itemIndx-1])/2) +".."+str((distinctSet[itemIndx]+distinctSet[itemIndx+1])/2)
-        symbols[str(distinctSet[len(distinctSet)-1])] = str((distinctSet[len(distinctSet)-1]+distinctSet[len(distinctSet)-2])/2) +".."+str((distinctSet[len(distinctSet)-1]))
+        symbols[str(distinctSet[len(distinctSet)-1])] = str((distinctSet[len(distinctSet)-1]+distinctSet[len(distinctSet)-2])/2) +".."+str((distinctSet[len(distinctSet)-1]))                
         for case in data:
-            case[column] = symbols[str(case[column])]
+            case[column] = symbols[str(float(case[column]))]
 
 # Computing Partitions
 # Q is the set of all attributes(also called labels) and descisions (set of all cases?)
@@ -112,12 +116,64 @@ def NotDStarIsLessThanOrEqualToDStar(NotDStar, DStar):
             return False
     return True
 
-def InduceRulesFromGlobalCovering(gc, labels, U):
-    for att in partition:
-        columns.append(labels.index(att))
-    #Reduce every case to it's entity + attribute columns + decision
+def compareRuleToCase(rule, case, labels):
+    #print("comparing:",rule,"with",case)
+    columns = [labels.index(rule[x][0]) for x in range(len(rule)-1)]
+    # print("Found columns: ",columns)
+    for x in range(len(columns)):
+        if rule[x][1] != case[columns[x]]:
+            return False
+    return True
+
+def isResultSetValid(resultSet,validResult):
+    for d in resultSet:
+        #print("Comparing:", d[1], "with",validResult[-1][1])
+        if(d[1]) != validResult[-1][1]:
+            return False
+    return True
+
+def FormatRule(rule):
+    formattedRule = []
+    for condition in rule[:len(rule)-1]:
+        formattedRule.append("({},{})".format(condition[0],condition[1]))
+    formattedRule = " & ".join(formattedRule)
+    formattedRule = formattedRule + " -> ({},{})".format(rule[-1][0],rule[-1][1])
+    return formattedRule
+
+
+def InduceRulesFromGlobalCovering(gc, labels, data):
+    scopedSet = []
+    columns = [labels.index(gc[x]) for x in range(len(gc))]
+    columns.append(len(labels)-1)
+    #generate a rule from the global covering and the nth case
+    inducedRules = set()
     for case in data:
-        scopedSet.append(([case[0]]+[case[x] for x in columns]+[case[len(case)-1]]))
+        #print("New Case")
+        baseRule = [[labels[columns[x]],case[columns[x]]] for x in range(len(columns))]
+        # for position in columns:
+        #     baseRule.append([labels[position],case[position]])
+        #print("CreatedRule:", baseRule)
+        # test the rule to remove attributes
+            # find cases the rule applies to
+        foundCases = [[data[x][0],data[x][-1]] for x in range(len(data)) if compareRuleToCase(baseRule,data[x],labels)]
+        #print("Found Cases",foundCases)
+        tempRule = copy(baseRule)
+        for x in baseRule[:len(baseRule)-1]:
+            # remove attribute
+            #print("removing attribute:",x)
+            Q = copy(tempRule)
+            Q.remove(x)
+            # find cases the new rule applies to
+            newCases = [[data[x][0],data[x][-1]] for x in range(len(data)) if compareRuleToCase(Q,data[x],labels)]
+            #print("Found New Cases",newCases)
+            # check if rule is not certain
+            if isResultSetValid(newCases,Q):
+                tempRule = copy(Q)
+            # set new rule if it checks out
+            # attempt to remove another attribute
+        inducedRules.add(FormatRule(tempRule))
+    return inducedRules
+
     
 # U is the data table. 
 # Each row is called a case (also an entity). 
@@ -156,30 +212,29 @@ def InduceRulesFromGlobalCovering(gc, labels, U):
 def lem1Staging(U, symbolic = False):
     if not symbolic:
         Symbolicise(U[1])
-    DStar = getTheStarSet(U[0][len(U[0])-1:],U[0],U[1])
+    # print(U[1][0])
+    dStar = getTheStarSet(U[0][len(U[0])-1:],U[0],U[1])
+    # print(dStar)
     A = U[0][1:len(U[0])-1]
-    # AStarPartitionSet = generatePartitionsForSet(U)#computePartitions()#will probably become a generate all discernable partitions and for each over them
-    # for ASetPair in AStarPartitionSet:
-    # result = lem1(U,ASetPair,DStar)
-    # RList.append(result)
-    return lem1(U,A,DStar[1])
+    singleGlobalCovering = lem1(U,A,dStar[1])
+    return singleGlobalCovering
 
-def lem1(U,A,DStar):
+def lem1(U,A,dStar):
     # A = list(ASetPair[0][:])
     # AStar = ASetPair[1][:]
     AStar = getTheStarSet(A,U[0], U[1])
-    P = A[:] #alternate
+    P = copy(A) #alternate
     # P = list(ASetPair[0][:])
     R = None
-    # print("Is ",ASetPair[1], " less than ",DStar,sep='\n')
-    if NotDStarIsLessThanOrEqualToDStar(AStar[1], DStar):#not the worst comparison function
+    # print("Is ",AStar, " less than ",dStar,sep='\n')
+    if NotDStarIsLessThanOrEqualToDStar(AStar[1], dStar):#not the worst comparison function
         # print("Yes it is")
         # print("ASetPair",ASetPair[0])
         for a in A: #alternate
         # for a in ASetPair[0]:
             # print("P",P)
             # print("a",a)
-            Q = P[:]#.remove(a) # remove the value a from P     P-a
+            Q = copy(P)#.remove(a) # remove the value a from P     P-a
             # print("P - a",P)
             Q.remove(a)
             # print("P",P)
@@ -190,32 +245,25 @@ def lem1(U,A,DStar):
             # print("U[1]",U[1])
             QStar = getTheStarSet(Q,U[0], U[1])#will probably become a generate all discernable partitions and for each over them
             # print("Is ",QStar[1], " less than ",DStar,sep='\n')
-            if NotDStarIsLessThanOrEqualToDStar(QStar[1], DStar):#not the worst comparison function
+            if NotDStarIsLessThanOrEqualToDStar(QStar[1], dStar):#not the worst comparison function
                 # print("Yes it is")
-                P = Q[:]
-        R = P[:]
+                P = copy(Q)
+        R = copy(P)
         # print(R)
     return R
+
 def main():
-    data = importData(r"C:\Users\DrMur\DataMining\Programming Project\flu.txt");
-    # Symbolicise(data[1])
-    results = lem1Staging(data, symbolic=True)
-    print(results)
-    #combos = generateAttributeCombos(data[0][1:len(data[0])-1])
-
-    #print(data)
-    # print("DStar: ",getTheStarSet(data[0][len(data[0])-1:],data[0],data[1]))
-    #print(combos)
-    # sets = generatePartitionsForSet(data)
-    # for StarSet in sets:
-    #     print(StarSet)
-
-    # DStar = [['1','2','4','5'],['3','6','7']]
-    # FailStar = [['3','6'],['5','7']]
-    # PassStar = [['1','4'],['3','6']]
-
-    # print("I should be true: ",NotDStarIsLessThanOrEqualToSetDStar(PassStar,DStar))
-    # print("I should be false: ",NotDStarIsLessThanOrEqualToSetDStar(FailStar,DStar))
+    path = r"C:\Users\DrMur\DataMining\Programming Project\\"
+    # 
+    inputFileNames = ["flu.txt","test.txt","german.txt","austr.txt","wine.txt"]
+    #outputFileName = "results_"+inputFileName
+    for fileName in inputFileNames:
+        print("Beginning: ",fileName)
+        data = importData(path+fileName)
+        results = lem1Staging(data, symbolic=False)
+        # print(results)
+        rules = InduceRulesFromGlobalCovering(results,data[0],data[1])
+        exportResults(path+"results_"+fileName,rules)
 
 
 if __name__ == "__main__":
