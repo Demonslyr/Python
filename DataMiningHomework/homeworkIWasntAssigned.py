@@ -4,6 +4,7 @@ from __future__ import print_function
 from itertools import *
 from decimal import Decimal
 import math
+import copy
 
 
 def importData(filePath):
@@ -111,6 +112,13 @@ def NotDStarIsLessThanOrEqualToDStar(NotDStar, DStar):
             return False
     return True
 
+def InduceRulesFromGlobalCovering(gc, labels, U):
+    for att in partition:
+        columns.append(labels.index(att))
+    #Reduce every case to it's entity + attribute columns + decision
+    for case in data:
+        scopedSet.append(([case[0]]+[case[x] for x in columns]+[case[len(case)-1]]))
+    
 # U is the data table. 
 # Each row is called a case (also an entity). 
 # The last column(attribute/parameter) of a row is typically the descision(outcome/result/choice). 
@@ -148,16 +156,17 @@ def NotDStarIsLessThanOrEqualToDStar(NotDStar, DStar):
 def lem1Staging(U, symbolic = False):
     if not symbolic:
         Symbolicise(U[1])
-    RList = []
-    DStar = getDStar(U[1])
+    DStar = getTheStarSet(U[0][len(U[0])-1:],U[0],U[1])
     A = U[0][1:len(U[0])-1]
-    result = lem1(U,A,DStar)
-    RList.append(result)
     # AStarPartitionSet = generatePartitionsForSet(U)#computePartitions()#will probably become a generate all discernable partitions and for each over them
     # for ASetPair in AStarPartitionSet:
-    return RList
+    # result = lem1(U,ASetPair,DStar)
+    # RList.append(result)
+    return lem1(U,A,DStar[1])
 
 def lem1(U,A,DStar):
+    # A = list(ASetPair[0][:])
+    # AStar = ASetPair[1][:]
     AStar = getTheStarSet(A,U[0], U[1])
     P = A[:] #alternate
     # P = list(ASetPair[0][:])
@@ -190,16 +199,16 @@ def lem1(U,A,DStar):
 def main():
     data = importData(r"C:\Users\DrMur\DataMining\Programming Project\flu.txt");
     # Symbolicise(data[1])
-    # results = lem1Staging(data, symbolic=True)
-    # print(results,sep='\n')
+    results = lem1Staging(data, symbolic=True)
+    print(results)
     #combos = generateAttributeCombos(data[0][1:len(data[0])-1])
 
     #print(data)
-    # print("DStar: ",getDStar(data[1]))
+    # print("DStar: ",getTheStarSet(data[0][len(data[0])-1:],data[0],data[1]))
     #print(combos)
-    sets = generatePartitionsForSet(data)
-    for StarSet in sets:
-        print(StarSet)
+    # sets = generatePartitionsForSet(data)
+    # for StarSet in sets:
+    #     print(StarSet)
 
     # DStar = [['1','2','4','5'],['3','6','7']]
     # FailStar = [['3','6'],['5','7']]
