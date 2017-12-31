@@ -117,9 +117,7 @@ def NotDStarIsLessThanOrEqualToDStar(NotDStar, DStar):
     return True
 
 def compareRuleToCase(rule, case, labels):
-    #print("comparing:",rule,"with",case)
     columns = [labels.index(rule[x][0]) for x in range(len(rule)-1)]
-    # print("Found columns: ",columns)
     for x in range(len(columns)):
         if rule[x][1] != case[columns[x]]:
             return False
@@ -127,7 +125,6 @@ def compareRuleToCase(rule, case, labels):
 
 def isResultSetValid(resultSet,validResult):
     for d in resultSet:
-        #print("Comparing:", d[1], "with",validResult[-1][1])
         if(d[1]) != validResult[-1][1]:
             return False
     return True
@@ -137,7 +134,7 @@ def FormatRule(rule):
     for condition in rule[:len(rule)-1]:
         formattedRule.append("({},{})".format(condition[0],condition[1]))
     formattedRule = " & ".join(formattedRule)
-    formattedRule = formattedRule + " -> ({},{})".format(rule[-1][0],rule[-1][1])
+    formattedRule += " -> ({},{})".format(rule[-1][0],rule[-1][1])
     return formattedRule
 
 
@@ -148,24 +145,17 @@ def InduceRulesFromGlobalCovering(gc, labels, data):
     #generate a rule from the global covering and the nth case
     inducedRules = set()
     for case in data:
-        #print("New Case")
         baseRule = [[labels[columns[x]],case[columns[x]]] for x in range(len(columns))]
-        # for position in columns:
-        #     baseRule.append([labels[position],case[position]])
-        #print("CreatedRule:", baseRule)
         # test the rule to remove attributes
             # find cases the rule applies to
         foundCases = [[data[x][0],data[x][-1]] for x in range(len(data)) if compareRuleToCase(baseRule,data[x],labels)]
-        #print("Found Cases",foundCases)
         tempRule = copy(baseRule)
         for x in baseRule[:len(baseRule)-1]:
             # remove attribute
-            #print("removing attribute:",x)
             Q = copy(tempRule)
             Q.remove(x)
             # find cases the new rule applies to
             newCases = [[data[x][0],data[x][-1]] for x in range(len(data)) if compareRuleToCase(Q,data[x],labels)]
-            #print("Found New Cases",newCases)
             # check if rule is not certain
             if isResultSetValid(newCases,Q):
                 tempRule = copy(Q)
@@ -212,19 +202,14 @@ def InduceRulesFromGlobalCovering(gc, labels, data):
 def lem1Staging(U, symbolic = False):
     if not symbolic:
         Symbolicise(U[1])
-    # print(U[1][0])
     dStar = getTheStarSet(U[0][len(U[0])-1:],U[0],U[1])
-    # print(dStar)
     A = U[0][1:len(U[0])-1]
     singleGlobalCovering = lem1(U,A,dStar[1])
     return singleGlobalCovering
 
 def lem1(U,A,dStar):
-    # A = list(ASetPair[0][:])
-    # AStar = ASetPair[1][:]
     AStar = getTheStarSet(A,U[0], U[1])
     P = copy(A) #alternate
-    # P = list(ASetPair[0][:])
     R = None
     # print("Is ",AStar, " less than ",dStar,sep='\n')
     if NotDStarIsLessThanOrEqualToDStar(AStar[1], dStar):#not the worst comparison function
